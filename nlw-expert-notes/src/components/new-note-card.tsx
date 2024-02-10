@@ -3,9 +3,13 @@ import { X } from 'lucide-react'
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { toast} from 'sonner'
 
-export function NewNoteCard(){
+interface newNoteCardProps{
+  onNoteCreated: (content: string ) => void
+}
+export function NewNoteCard({onNoteCreated}: newNoteCardProps){
 const [shouldShowOnboarding, setShouldShowOnBoarding] = useState(true)
 const [content, setContent] = useState('')
+const [isRecording, setIsRecording] = useState(false)
     function handleStartEditor(){
         setShouldShowOnBoarding(false)
     }
@@ -23,7 +27,17 @@ const [content, setContent] = useState('')
 
         toast.success('Nota criada com sucesso!')
 
-        console.log(content)
+        setContent('')
+        
+        setShouldShowOnBoarding(true)
+
+        onNoteCreated(content)
+    }
+    function handleStartRecording(){
+      setIsRecording(true)
+    }
+    function handleStopRecording(){
+      setIsRecording(false)
     }
     return (
     <Dialog.Root>
@@ -48,22 +62,38 @@ const [content, setContent] = useState('')
           </span>
         {shouldShowOnboarding ? (
               <p className="text-sm leading-6 text-slate-300 ">
-              Comece <button className="font-medium text-lime-400 hover:underline">gravando uma nota </button> em aúdio ou se preferir <button onClick={handleStartEditor} className="font-medium text-lime-400 hover:underline"> utilize apenas texto </button>
+              Comece <button type="button" onClick={handleStartRecording} className="font-medium text-lime-400 hover:underline">gravando uma nota </button> em aúdio ou se preferir <button type="button" onClick={handleStartEditor} className="font-medium text-lime-400 hover:underline"> utilize apenas texto </button>
              </p>
         ): (
             <textarea 
             autoFocus 
             className="text-sm leadin-6 text-slate-400 bg-transparent resize-none flex-1 outline-none"
             onChange={handleContentChanged}
+            value={content}
             />
         )}
         </div>
-        <button 
-        onClick={handleSaveNote}
+
+
+        {isRecording ? (
+          <button 
         type="button" 
-        className="w-full bg-lime-400 font-medium py-4 text-lime-950 text-center text-sm outline-none hover:bg-lime-500">
-            Salvar nota
+        onClick={handleStopRecording}
+        className="w-full bg-slate-900 flex items-center justify-center gap-2 font-medium py-4 text-slate-300 text-center text-sm outline-none hover:text-slate-100">
+           <div className="size-3 rounded-full bg-red-500 animate-pulse"> 
+            Gravando! (clique p/ interromper)
+            </div>
         </button>
+        ):(
+
+          <button 
+          type="button" 
+          onClick={handleSaveNote}
+          className="w-full bg-lime-400 font-medium py-4 text-lime-950 text-center text-sm outline-none hover:bg-lime-500">
+              Salvar nota
+          </button>  
+        )}
+        
         </form>
       </Dialog.Content>
     </Dialog.Portal>
