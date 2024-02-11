@@ -3,27 +3,35 @@ import { X } from 'lucide-react'
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { toast} from 'sonner'
 
+
 interface newNoteCardProps{
   onNoteCreated: (content: string ) => void
 }
+
+let speechRecognition: SpeechRecognition | null = null
+
 export function NewNoteCard({onNoteCreated}: newNoteCardProps){
 const [shouldShowOnboarding, setShouldShowOnBoarding] = useState(true)
 const [content, setContent] = useState('')
 const [isRecording, setIsRecording] = useState(false)
+
     function handleStartEditor(){
         setShouldShowOnBoarding(false)
     }
-
     function handleContentChanged(event: ChangeEvent<HTMLTextAreaElement>){
+        
         setContent(event.target.value)
 
         if(event.target.value === ''){
             setShouldShowOnBoarding(true)
         }
     }
-
     function handleSaveNote(event: FormEvent){
         event.preventDefault()
+
+        if(content === ''){
+            return
+        }
 
         toast.success('Nota criada com sucesso!')
 
@@ -35,9 +43,42 @@ const [isRecording, setIsRecording] = useState(false)
     }
     function handleStartRecording(){
       setIsRecording(true)
+      const isSpeechRecognitionAPIAvailable = 'SpeechRecognition' in window 
+      || 'webkitSpeechRecognition' in window
+
+      if(!isSpeechRecognitionAPIAvailable){
+        alert('Infelizmente seu navegador não suporta a API de gravação!')
+        return
+      }
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition
+
+      speechRecognition = new SpeechRecognitionAPI()
+
+      speechRecognition.lang = 'pt-BR'
+      speechRecognition.continuous = true
+      speechRecognition.maxAlternatives = 1
+      speechRecognition.interimResults = true  
+      
+      speechRecognition.onresult =(event) =>{
+
+        const transcription = Array.from(event.results).reduce((text, result)=>{
+         return text.concat(result[0].transcript) 
+        }, '')
+
+        setContent(transcription)
+      }
+      speechRecognition.onerror =(event)=>{
+
+        console.error(event)
+      }
+
+      speechRecognition.start()
     }
     function handleStopRecording(){
       setIsRecording(false)
+      if(speechRecognition != null){
+        speechRecognition.stop()
+      }
     }
     return (
     <Dialog.Root>
@@ -51,7 +92,7 @@ const [isRecording, setIsRecording] = useState(false)
     </Dialog.Trigger>
     <Dialog.Portal>
       <Dialog.Overlay className=" inset-0 fixed bg-black/60"/>
-        <Dialog.Content className=" fixed overflow-hidden left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[640px] w-full h-[60vh] bg-slate-700 rounded-md flex flex-col outline-none">
+        <Dialog.Content className=" fixed overflow-hidden inset-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-[640px] w-full md:h-[60vh] bg-slate-700 md:rounded-md flex flex-col outline-none">
           <Dialog.DialogClose className="absolute right-0 top-0 bg-slate-800 p-1.5 text-slate-400 hover:text-slate-100">
             <X className="size-5" />
           </Dialog.DialogClose>
@@ -62,7 +103,7 @@ const [isRecording, setIsRecording] = useState(false)
           </span>
         {shouldShowOnboarding ? (
               <p className="text-sm leading-6 text-slate-300 ">
-              Comece <button type="button" onClick={handleStartRecording} className="font-medium text-lime-400 hover:underline">gravando uma nota </button> em aúdio ou se preferir <button type="button" onClick={handleStartEditor} className="font-medium text-lime-400 hover:underline"> utilize apenas texto </button>
+              Comece <button type="button" onClick={ ()=>{handleStartRecording(); handleStartEditor();}} className="font-medium text-lime-400 hover:underline">gravando uma nota </button> em aúdio ou se preferir <button type="button" onClick={handleStartEditor} className="font-medium text-lime-400 hover:underline"> utilize apenas texto </button>
              </p>
         ): (
             <textarea 
@@ -76,16 +117,15 @@ const [isRecording, setIsRecording] = useState(false)
 
 
         {isRecording ? (
-          <button 
-        type="button" 
-        onClick={handleStopRecording}
-        className="w-full bg-slate-900 flex items-center justify-center gap-2 font-medium py-4 text-slate-300 text-center text-sm outline-none hover:text-slate-100">
-           <div className="size-3 rounded-full bg-red-500 animate-pulse"> 
+        <button 
+          type="button" 
+          onClick={handleStopRecording}
+          className="w-full bg-slate-900 flex items-center justify-center gap-2 font-medium py-4 text-slate-300 text-center text-sm outline-none hover:text-slate-100"
+        >
+          <div className="size-3 rounded-full bg-red-500 animate-pulse"/> 
             Gravando! (clique p/ interromper)
-            </div>
         </button>
         ):(
-
           <button 
           type="button" 
           onClick={handleSaveNote}
